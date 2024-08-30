@@ -1,0 +1,8 @@
+.gitignore
+.idea/.gitignore
+.idea/misc.xml
+.idea/modules.xml
+.idea/workspace.xml
+.idea/vcs.xml
+.idea/.name
+.idea/backtesting&visualization.iml
