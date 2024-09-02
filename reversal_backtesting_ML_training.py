@@ -167,6 +167,6 @@ with pd.ExcelWriter('model_test_results.xlsx', mode='a', engine='openpyxl') as w
 
 # Step 11: Save the trained model with versioning
 
-model_filename = 'random_forest_model_v1.0.pkl'
+model_filename = 'random_forest_model_v1.1.pkl'
 joblib.dump(rf_classifier, model_filename)
 print(f"Model saved as {model_filename}")
