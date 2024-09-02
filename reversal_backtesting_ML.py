@@ -2,6 +2,7 @@ import pandas as pd
 from _managing_data import update_data
 from common_functions import calculate_heikin_ashi
 import pandas_ta as ta
+import datetime
 
 # Helper function to determine the higher timeframe
 def get_higher_timeframe(timeframe):
@@ -82,6 +83,13 @@ def backtest(df, higher_df, symbol, timeframe, initial_deposit=10000, risk_per_t
     short_position_open = False
 
     for i in range(1, len(df)):
+
+        current_time = df.index[i]
+        weekday = current_time.weekday()  # Monday is 0, Sunday is 6
+
+        # Skip if it's Saturday or Sunday
+        if weekday in [5, 6]:
+            continue
 
         # Check for a long trade entry
         if df['Long_Signal'].iloc[i] == 1 and not long_position_open:
