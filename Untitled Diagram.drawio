@@ -8,19 +8,22 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="mFt8jnvkjNyD6lXSa_r2-1" value="&lt;h2 style=&quot;text-align: center;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Reversal strategy&lt;/font&gt;&lt;/h2&gt;&lt;div&gt;signal from MACD, heading to SuperTrend&lt;br&gt;&lt;span style=&quot;font-style: italic; font-weight: 600;&quot; class=&quot;notion-enable-hover&quot; data-token-index=&quot;1&quot;&gt;tp &amp;amp; sl management&lt;/span&gt;:&lt;br&gt;-&amp;nbsp;&lt;span style=&quot;color: inherit; border-bottom: 0.05em solid; overflow-wrap: break-word;&quot; class=&quot;notion-enable-hover&quot; data-token-index=&quot;3&quot;&gt;tp&lt;/span&gt;: SuperTrend - half of ATR&lt;br&gt;-&amp;nbsp;&lt;span style=&quot;color: inherit; border-bottom: 0.05em solid; overflow-wrap: break-word;&quot; class=&quot;notion-enable-hover&quot; data-token-index=&quot;5&quot;&gt;sl&lt;/span&gt;: previous extremum + half of ATR&amp;nbsp;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelBackgroundColor=none;" vertex="1" parent="1">
-          <mxGeometry x="80" y="80" width="232" height="145" as="geometry" />
+          <mxGeometry x="134" y="79" width="232" height="145" as="geometry" />
         </mxCell>
         <mxCell id="mFt8jnvkjNyD6lXSa_r2-4" value="&lt;h2 style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Following strategy&lt;/font&gt;&lt;/span&gt;&lt;/h2&gt;&lt;div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;signal from MACD, heading against SuperTrend&lt;/span&gt;&lt;/div&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;tp &amp;amp; sl management:&lt;/span&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;-&amp;nbsp;&lt;span style=&quot;color: inherit; border-bottom: 0.05em solid; overflow-wrap: break-word;&quot; class=&quot;notion-enable-hover&quot; data-token-index=&quot;3&quot;&gt;tp&lt;/span&gt;: distance from close price to SuperTrend in opposite direction&lt;br&gt;-&amp;nbsp;&lt;span style=&quot;color: inherit; border-bottom: 0.05em solid; overflow-wrap: break-word;&quot; class=&quot;notion-enable-hover&quot; data-token-index=&quot;5&quot;&gt;sl&lt;/span&gt;: SuperTrend + half of ATR&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
-          <mxGeometry x="376" y="82.5" width="259" height="140" as="geometry" />
+          <mxGeometry x="430" y="81.5" width="259" height="140" as="geometry" />
         </mxCell>
         <mxCell id="mFt8jnvkjNyD6lXSa_r2-5" value="&lt;h2 style=&quot;text-align: right;&quot;&gt;Backtesting results&lt;/h2&gt;&lt;div&gt;- win-rate&lt;/div&gt;&lt;div&gt;- profit&lt;/div&gt;&lt;div&gt;- timeframe&lt;/div&gt;&lt;div&gt;- total trades&lt;/div&gt;&lt;div&gt;- symbol&lt;/div&gt;&lt;div&gt;- money management (5%)&lt;/div&gt;&lt;div&gt;- max-drawdown&lt;/div&gt;&lt;div&gt;- max loss trades in a raw&lt;/div&gt;&lt;div&gt;&lt;div&gt;- average duration of the trade&lt;/div&gt;&lt;div&gt;- maximum duration of the trade&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
-          <mxGeometry x="247" y="283" width="195" height="205" as="geometry" />
+          <mxGeometry x="301" y="282" width="195" height="205" as="geometry" />
         </mxCell>
         <mxCell id="mFt8jnvkjNyD6lXSa_r2-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.558;entryY=0.003;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="mFt8jnvkjNyD6lXSa_r2-4" target="mFt8jnvkjNyD6lXSa_r2-5">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="mFt8jnvkjNyD6lXSa_r2-10" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="40" y="44" width="635" height="472" as="geometry" />
+          <mxGeometry x="94" y="43" width="635" height="472" as="geometry" />
+        </mxCell>
+        <mxCell id="mFt8jnvkjNyD6lXSa_r2-11" value="&lt;h2&gt;Backtesting&lt;/h2&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="10" y="255" width="124" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
