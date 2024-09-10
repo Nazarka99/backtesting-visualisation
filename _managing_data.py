@@ -26,8 +26,8 @@ def fetch_data(symbol, timeframe, limit=1000):
 
 def update_data(symbol, timeframe):
     """Updates or creates an Excel file with OHLCV data for a given symbol and timeframe."""
-    filename = f"_data/{symbol.replace('/', '')}_{timeframe}.xlsx"
-    os.makedirs('_data', exist_ok=True)  # Ensure the directory exists
+    filename = f"__data/{symbol.replace('/', '')}_{timeframe}.xlsx"
+    os.makedirs('__data', exist_ok=True)  # Ensure the directory exists
 
     try:
         if os.path.exists(filename):
