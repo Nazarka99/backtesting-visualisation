@@ -8,7 +8,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def fetch_data(symbol, timeframe, limit=1000):
-    """Fetches OHLCV data for a given cryptocurrency symbol and timeframe."""
+    """Fetches OHLCV data for a given cryptocurrency symbol and timeframe, excluding the last unclosed candle."""
     exchange = ccxt.binance()
     try:
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
@@ -16,6 +16,8 @@ def fetch_data(symbol, timeframe, limit=1000):
             df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
+            # Remove the last row to avoid including an open candle
+            df = df[:-1]
             return df
         else:
             logging.warning(f"No data returned for {symbol} on {timeframe}.")
@@ -24,10 +26,11 @@ def fetch_data(symbol, timeframe, limit=1000):
         logging.error(f"Error fetching data for {symbol} on {timeframe}: {e}")
         return pd.DataFrame()
 
+
 def update_data(symbol, timeframe):
-    """Updates or creates an Excel file with OHLCV data for a given symbol and timeframe."""
-    filename = f"__data/{symbol.replace('/', '')}_{timeframe}.xlsx"
-    os.makedirs('__data', exist_ok=True)  # Ensure the directory exists
+    """Updates or creates an Excel file with OHLCV data for a given symbol and timeframe, excluding the last unclosed candle."""
+    filename = f"_data/{symbol.replace('/', '')}_{timeframe}.xlsx"
+    os.makedirs('_data', exist_ok=True)  # Ensure the directory exists
 
     try:
         if os.path.exists(filename):
@@ -37,11 +40,15 @@ def update_data(symbol, timeframe):
             new_data = fetch_data(symbol, timeframe, limit=1000)
             if not new_data.empty:
                 new_data = new_data[new_data.index > latest_timestamp]
+                # Remove the last row again to ensure consistency
+                new_data = new_data[:-1]
                 updated_df = pd.concat([existing_df, new_data])
             else:
                 updated_df = existing_df
         else:
             updated_df = fetch_data(symbol, timeframe, limit=1000)
+            # Remove the last row when creating a new file
+            updated_df = updated_df[:-1]
 
         if not updated_df.empty:
             updated_df.to_excel(filename)
@@ -51,6 +58,7 @@ def update_data(symbol, timeframe):
     except Exception as e:
         logging.error(f"Failed to update data for {symbol} on {timeframe}: {e}")
         return None
+
 
 if __name__ == "__main__":
     symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
