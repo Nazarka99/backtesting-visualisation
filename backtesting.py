@@ -14,17 +14,15 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 symbols = ['BTC/USDT', 'ETH/USDT']
 timeframes = ['1h', '4h']
 
+
 def macd_signals(df):
-    """Generate trading signals based on MACD crossover with no consecutive same signals."""
-    df['signal'] = 0
-    previous_signal = 0
-    for i in range(1, len(df) - 1):
-        if df['macd'][i] > df['macd_signal'][i] and previous_signal != 1:
-            df.loc[df.index[i + 1], 'signal'] = 1  # Buy signal on the next candle
-            previous_signal = 1
-        elif df['macd'][i] < df['macd_signal'][i] and previous_signal != -1:
-            df.loc[df.index[i + 1], 'signal'] = -1  # Sell signal on the next candle
-            previous_signal = -1
+    """Generate potential trading opportunities based on MACD crossover."""
+    df['potential_signal'] = 0
+    for i in range(1, len(df)):
+        if df['macd'].iloc[i] > df['macd_signal'].iloc[i]:
+            df.loc[df.index[i], 'potential_signal'] = 1  # Potential buy
+        elif df['macd'].iloc[i] < df['macd_signal'].iloc[i]:
+            df.loc[df.index[i], 'potential_signal'] = -1  # Potential sell
     return df
 
 
@@ -37,8 +35,15 @@ def backtest_strategy(df):
     peak_capital = capital
 
     for index, row in df.iterrows():
-        if row['signal'] == 1 or row['signal'] == -1:
-            entry_price = row['Ha_close']
+        if row['potential_signal'] == 1 and row['close'] > row['SuperTrend'] and row['close'] > row['SMA200']:
+            # Confirm buy signal if above SuperTrend and SMA
+            row['signal'] = 1
+        elif row['potential_signal'] == -1 and row['close'] < row['SuperTrend'] and row['close'] < row['SMA200']:
+            # Confirm sell signal if below SuperTrend and SMA
+            row['signal'] = -1
+
+        if 'signal' in row and row['signal'] != 0:
+            entry_price = row['open']
             atr = row['ATR']
             super_trend = row['SuperTrend']
             stop_loss = super_trend - atr if row['signal'] == 1 else super_trend + atr
@@ -54,10 +59,8 @@ def backtest_strategy(df):
                     exit_price = take_profit
                     break
 
-            # Ensure exit_price is set
             if exit_price is None:
-                exit_price = future_row['close']  # default to the last available price if no exit was triggered
-                print(f"No exit condition met for {row['signal']} signal at index {index}, defaulting to last price.")
+                exit_price = future_row['close']  # Default exit price
 
             profit = (exit_price - entry_price) * position_size if row['signal'] == 1 else (entry_price - exit_price) * position_size
             capital += profit
@@ -65,24 +68,13 @@ def backtest_strategy(df):
             current_drawdown = peak_capital - capital
             max_drawdown = max(max_drawdown, current_drawdown)
 
-            trade = {
-                'Entry': entry_price,
-                'Exit': exit_price,
-                'Profit': profit,
-                'Type': 'Long' if row['signal'] == 1 else 'Short',
-                'Entry Date': index,
-                'Exit Date': j if exit_price else None
-            }
+            trade = {'Entry': entry_price, 'Exit': exit_price, 'Profit': profit, 'Type': 'Long' if row['signal'] == 1 else 'Short', 'Entry Date': index, 'Exit Date': j if exit_price else None}
             trades.append(trade)
 
     win_rate = sum(1 for trade in trades if trade['Profit'] > 0) / len(trades) if trades else 0
     total_profit = sum(trade['Profit'] for trade in trades)
-    return {
-        'Trades': trades,
-        'Win Rate': win_rate,
-        'Total Profit': total_profit,
-        'Max Drawdown': max_drawdown
-    }
+    return {'Trades': trades, 'Win Rate': win_rate, 'Total Profit': total_profit, 'Max Drawdown': max_drawdown}
+
 
 
 def calculate_indicators(df):
@@ -144,6 +136,8 @@ def main():
                 'Total Profit': metrics['Total Profit'],
                 'Max Drawdown': metrics['Max Drawdown']
             })
+
+            print(f'Done for the {symbol} with the {timeframe} timeframe')
 
     save_results_to_excel(results)
     save_summary_to_excel(summary)
