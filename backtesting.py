@@ -9,10 +9,16 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # Define symbols and timeframes
 # symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
 #            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-# timeframes = ['15m', '30m', '1h', '2h', '4h']
+# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
+#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+timeframes = ['15m', '30m', '1h', '2h', '4h']
 
-symbols = ['BTC/USDT', 'ETH/USDT']
-timeframes = ['1h', '4h']
+symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
+           'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+# timeframes = ['4h']
+
+# symbols = ['BTC/USDT', 'ETH/USDT']
+# timeframes = ['1h', '4h']
 
 
 def macd_signals(df):
@@ -35,10 +41,10 @@ def backtest_strategy(df):
     peak_capital = capital
 
     for index, row in df.iterrows():
-        if row['potential_signal'] == 1 and row['close'] > row['SuperTrend'] and row['close'] > row['SMA200']:
+        if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
             # Confirm buy signal if above SuperTrend and SMA
             row['signal'] = 1
-        elif row['potential_signal'] == -1 and row['close'] < row['SuperTrend'] and row['close'] < row['SMA200']:
+        elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
             # Confirm sell signal if below SuperTrend and SMA
             row['signal'] = -1
 
@@ -112,14 +118,17 @@ def save_results_to_excel(results, filename='backtesting_results.xlsx'):
 
 def save_summary_to_excel(summary, filename='backtesting_summary.xlsx'):
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
+        # Create DataFrame from summary list including the 'Trades Count'
         df_summary = pd.DataFrame(summary)
         df_summary.to_excel(writer, sheet_name='Summary', index=False)
+
 
 
 
 def main():
     results = {}
     summary = []
+    leverage = 30  # Leverage factor
 
     for symbol in symbols:
         for timeframe in timeframes:
@@ -134,15 +143,18 @@ def main():
                 'Timeframe': timeframe,
                 'Win Rate': metrics['Win Rate'],
                 'Total Profit': metrics['Total Profit'],
-                'Max Drawdown': metrics['Max Drawdown']
+                'Max Drawdown': metrics['Max Drawdown'],
+                'Trades Count': len(metrics['Trades'])  # Include count of trades here
             })
 
-            print(f'Done for the {symbol} with the {timeframe} timeframe')
+            print(f'Done backtesting for {symbol} with the {timeframe} timeframe')
 
     save_results_to_excel(results)
     save_summary_to_excel(summary)
     print("Backtesting completed and results are saved.")
 
-
 if __name__ == "__main__":
     main()
+
+
+
