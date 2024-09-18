@@ -10,14 +10,13 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
 #            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
 
-# timeframes = ['15m', '30m', '1h', '2h', '4h']
-
-# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
-#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-
 timeframes = ['30m', '1h']
 
 symbols = ['BTC/USDT', 'ETH/USDT']
+
+# timeframes = ['30m', '1h']
+#
+# symbols = ['BTC/USDT', 'ETH/USDT']
 
 
 
@@ -129,17 +128,22 @@ def calculate_indicators(df):
     return df
 
 
-
 def save_results_to_excel(results, filename='backtesting_results.xlsx'):
-    """Save the backtesting results to an Excel file."""
-    with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        for (symbol, timeframe, tp_multiplier), data in results.items():
-            # Replace invalid characters for Excel sheet names and include the TP multiplier in the sheet name
-            safe_sheet_name = f'{symbol.replace("/", "-")}_{timeframe}_TP{tp_multiplier}'
-            df = pd.DataFrame(data)
-            # Write DataFrame to an Excel sheet with a valid name, including TP multiplier
-            df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+    """Save the backtesting results to an Excel file in a single sheet."""
+    # Create an empty DataFrame to collect all trade data
+    consolidated_data = pd.DataFrame()
 
+    # Iterate through all trade data and append to the consolidated DataFrame
+    for (symbol, timeframe, tp_multiplier), trades in results.items():
+        df = pd.DataFrame(trades)
+        df['Symbol'] = symbol
+        df['Timeframe'] = timeframe
+        df['TP Multiplier'] = tp_multiplier
+        consolidated_data = pd.concat([consolidated_data, df], ignore_index=True)
+
+    # Write the consolidated DataFrame to an Excel file
+    with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
+        consolidated_data.to_excel(writer, sheet_name='Consolidated Results', index=False)
 
 def save_summary_to_excel(summary, filename='backtesting_summary.xlsx'):
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
