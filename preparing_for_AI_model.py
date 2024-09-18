@@ -90,6 +90,7 @@ def calculate_indicators(df):
     supertrend_values = ta.supertrend(df['HA_high'], df['HA_low'], df['HA_close'], length=12, multiplier=3)
     df['SuperTrend'] = supertrend_values['SUPERT_12_3.0']
     df['ATR'] = ta.atr(df['HA_high'], df['HA_low'], df['HA_close'], length=14)
+    df['RSI'] = ta.rsi(df['HA_close'], length=14)  # RSI calculation based on Heikin Ashi close
     return df
 
 def save_results_to_excel(results, filename='backtesting_results.xlsx'):
@@ -105,14 +106,13 @@ def main():
             df = calculate_heikin_ashi(df)
             df = calculate_indicators(df)
             df = macd_signals(df)
-
-            # Add 'Symbol' and 'Timeframe' columns before passing to backtesting
             df['Symbol'] = symbol
             df['Timeframe'] = timeframe
-
             trades = backtest_strategy(df)
             results.extend(trades)
     save_results_to_excel(results)
+
+    print('Done')
 
 if __name__ == "__main__":
     main()
