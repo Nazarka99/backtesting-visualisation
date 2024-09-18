@@ -9,16 +9,12 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # Define symbols and timeframes
 # symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
 #            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
-#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+
 timeframes = ['15m', '30m', '1h', '2h', '4h']
 
 symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-# timeframes = ['4h']
 
-# symbols = ['BTC/USDT', 'ETH/USDT']
-# timeframes = ['1h', '4h']
 
 
 def macd_signals(df):
@@ -42,45 +38,56 @@ def backtest_strategy(df):
 
     for index, row in df.iterrows():
         if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
-            # Confirm buy signal if above SuperTrend and SMA
-            row['signal'] = 1
+            row['signal'] = 1  # Long position
         elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
-            # Confirm sell signal if below SuperTrend and SMA
-            row['signal'] = -1
+            row['signal'] = -1  # Short position
 
-        if 'signal' in row and row['signal'] != 0:
+        if 'signal' in row:
             entry_price = row['open']
             atr = row['ATR']
             super_trend = row['SuperTrend']
             stop_loss = super_trend - atr if row['signal'] == 1 else super_trend + atr
-            take_profit = entry_price + (entry_price - stop_loss) if row['signal'] == 1 else entry_price - (stop_loss - entry_price)
-            position_size = (risk_per_trade * capital) / abs(entry_price - stop_loss)
-            exit_price = None
+            stop_loss_distance = abs(entry_price - stop_loss)
 
-            for j, future_row in df.loc[index:].iterrows():
-                if (future_row['low'] <= stop_loss and row['signal'] == 1) or (future_row['high'] >= stop_loss and row['signal'] == -1):
-                    exit_price = stop_loss
-                    break
-                if (future_row['high'] >= take_profit and row['signal'] == 1) or (future_row['low'] <= take_profit and row['signal'] == -1):
-                    exit_price = take_profit
-                    break
+            # Calculate TP as multiples of SL distance minus 1 ATR for the direction
+            tp_multipliers = [1, 1.5, 2]
+            tps = [(entry_price + multiplier * stop_loss_distance - atr if row['signal'] == 1 else entry_price - multiplier * stop_loss_distance + atr) for multiplier in tp_multipliers]
 
-            if exit_price is None:
-                exit_price = future_row['close']  # Default exit price
+            position_size = (risk_per_trade * capital) / stop_loss_distance
 
-            profit = (exit_price - entry_price) * position_size if row['signal'] == 1 else (entry_price - exit_price) * position_size
-            capital += profit
-            peak_capital = max(peak_capital, capital)
-            current_drawdown = peak_capital - capital
-            max_drawdown = max(max_drawdown, current_drawdown)
+            for tp in tps:
+                exit_price = None
+                for j, future_row in df.loc[index:].iterrows():
+                    if row['signal'] == 1 and (future_row['low'] <= stop_loss or future_row['high'] >= tp):
+                        exit_price = stop_loss if future_row['low'] <= stop_loss else tp
+                        break
+                    elif row['signal'] == -1 and (future_row['high'] >= stop_loss or future_row['low'] <= tp):
+                        exit_price = stop_loss if future_row['high'] >= stop_loss else tp
+                        break
 
-            trade = {'Entry': entry_price, 'Exit': exit_price, 'Profit': profit, 'Type': 'Long' if row['signal'] == 1 else 'Short', 'Entry Date': index, 'Exit Date': j if exit_price else None}
-            trades.append(trade)
+                if exit_price is None:
+                    continue  # If no exit was triggered, evaluate next TP
+
+                profit = (exit_price - entry_price) * position_size if row['signal'] == 1 else (entry_price - exit_price) * position_size
+                capital += profit
+                peak_capital = max(peak_capital, capital)
+                current_drawdown = peak_capital - capital
+                max_drawdown = max(max_drawdown, current_drawdown)
+
+                trade = {
+                    'Entry': entry_price,
+                    'Exit': exit_price,
+                    'Profit': profit,
+                    'Type': 'Long' if row['signal'] == 1 else 'Short',
+                    'Entry Date': index,
+                    'Exit Date': j,
+                    'TP Multiplier': tp / stop_loss_distance  # Track the TP multiplier for this trade
+                }
+                trades.append(trade)
 
     win_rate = sum(1 for trade in trades if trade['Profit'] > 0) / len(trades) if trades else 0
     total_profit = sum(trade['Profit'] for trade in trades)
     return {'Trades': trades, 'Win Rate': win_rate, 'Total Profit': total_profit, 'Max Drawdown': max_drawdown}
-
 
 
 def calculate_indicators(df):
@@ -121,9 +128,6 @@ def save_summary_to_excel(summary, filename='backtesting_summary.xlsx'):
         # Create DataFrame from summary list including the 'Trades Count'
         df_summary = pd.DataFrame(summary)
         df_summary.to_excel(writer, sheet_name='Summary', index=False)
-
-
-
 
 def main():
     results = {}
