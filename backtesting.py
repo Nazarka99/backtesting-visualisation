@@ -10,10 +10,14 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
 #            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
 
-timeframes = ['15m', '30m', '1h', '2h', '4h']
+# timeframes = ['15m', '30m', '1h', '2h', '4h']
 
-symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
-           'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
+#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+
+timeframes = ['30m', '1h']
+
+symbols = ['BTC/USDT', 'ETH/USDT']
 
 
 
@@ -35,8 +39,15 @@ def backtest_strategy(df):
     capital = initial_capital
     max_drawdown = 0
     peak_capital = capital
+    trade_open = False  # Indicates if a trade is currently open
+
+    tp_multipliers = [1, 1.5, 2]
+    results = {multiplier: [] for multiplier in tp_multipliers}
 
     for index, row in df.iterrows():
+        if trade_open:
+            continue  # Skip to next row if a trade is already open
+
         if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
             row['signal'] = 1  # Long position
         elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
@@ -49,14 +60,13 @@ def backtest_strategy(df):
             stop_loss = super_trend - atr if row['signal'] == 1 else super_trend + atr
             stop_loss_distance = abs(entry_price - stop_loss)
 
-            # Calculate TP as multiples of SL distance minus 1 ATR for the direction
-            tp_multipliers = [1, 1.5, 2]
-            tps = [(entry_price + multiplier * stop_loss_distance - atr if row['signal'] == 1 else entry_price - multiplier * stop_loss_distance + atr) for multiplier in tp_multipliers]
-
             position_size = (risk_per_trade * capital) / stop_loss_distance
+            trade_open = True  # Mark that a trade is now open
 
-            for tp in tps:
+            for tp_multiplier in tp_multipliers:
+                tp = entry_price + tp_multiplier * stop_loss_distance - atr if row['signal'] == 1 else entry_price - tp_multiplier * stop_loss_distance + atr
                 exit_price = None
+
                 for j, future_row in df.loc[index:].iterrows():
                     if row['signal'] == 1 and (future_row['low'] <= stop_loss or future_row['high'] >= tp):
                         exit_price = stop_loss if future_row['low'] <= stop_loss else tp
@@ -81,13 +91,22 @@ def backtest_strategy(df):
                     'Type': 'Long' if row['signal'] == 1 else 'Short',
                     'Entry Date': index,
                     'Exit Date': j,
-                    'TP Multiplier': tp / stop_loss_distance  # Track the TP multiplier for this trade
+                    'TP Multiplier': tp_multiplier  # Track the TP multiplier for this trade
                 }
-                trades.append(trade)
+                results[tp_multiplier].append(trade)
+                trade_open = False  # Close the trade after exit
 
-    win_rate = sum(1 for trade in trades if trade['Profit'] > 0) / len(trades) if trades else 0
-    total_profit = sum(trade['Profit'] for trade in trades)
-    return {'Trades': trades, 'Win Rate': win_rate, 'Total Profit': total_profit, 'Max Drawdown': max_drawdown}
+    final_results = {}
+    for multiplier, trades in results.items():
+        win_rate = sum(1 for trade in trades if trade['Profit'] > 0) / len(trades) if trades else 0
+        total_profit = sum(trade['Profit'] for trade in trades)
+        final_results[multiplier] = {
+            'Trades': trades,
+            'Win Rate': win_rate,
+            'Total Profit': total_profit,
+            'Max Drawdown': max_drawdown
+        }
+    return final_results
 
 
 def calculate_indicators(df):
@@ -114,13 +133,12 @@ def calculate_indicators(df):
 def save_results_to_excel(results, filename='backtesting_results.xlsx'):
     """Save the backtesting results to an Excel file."""
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        for (symbol, timeframe), data in results.items():
-            # Replace invalid characters for Excel sheet names
-            safe_sheet_name = f'{symbol.replace("/", "-")}_{timeframe}'
+        for (symbol, timeframe, tp_multiplier), data in results.items():
+            # Replace invalid characters for Excel sheet names and include the TP multiplier in the sheet name
+            safe_sheet_name = f'{symbol.replace("/", "-")}_{timeframe}_TP{tp_multiplier}'
             df = pd.DataFrame(data)
-            # Write DataFrame to an Excel sheet with a valid name
+            # Write DataFrame to an Excel sheet with a valid name, including TP multiplier
             df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
-        # No need to call writer.save() - it's handled automatically
 
 
 def save_summary_to_excel(summary, filename='backtesting_summary.xlsx'):
@@ -132,7 +150,6 @@ def save_summary_to_excel(summary, filename='backtesting_summary.xlsx'):
 def main():
     results = {}
     summary = []
-    leverage = 30  # Leverage factor
 
     for symbol in symbols:
         for timeframe in timeframes:
@@ -140,25 +157,26 @@ def main():
             df = calculate_heikin_ashi(df)
             df = calculate_indicators(df)
             df = macd_signals(df)
-            metrics = backtest_strategy(df)
-            results[(symbol, timeframe)] = metrics['Trades']
-            summary.append({
-                'Symbol': symbol,
-                'Timeframe': timeframe,
-                'Win Rate': metrics['Win Rate'],
-                'Total Profit': metrics['Total Profit'],
-                'Max Drawdown': metrics['Max Drawdown'],
-                'Trades Count': len(metrics['Trades'])  # Include count of trades here
-            })
+            metrics = backtest_strategy(df)  # Returns dictionary keyed by TP multiplier
+            for tp_multiplier, metric in metrics.items():
+                results[(symbol, timeframe, tp_multiplier)] = metric['Trades']
+                summary.append({
+                    'Symbol': symbol,
+                    'Timeframe': timeframe,
+                    'TP Multiplier': tp_multiplier,
+                    'Win Rate': metric['Win Rate'],
+                    'Total Profit': metric['Total Profit'],
+                    'Max Drawdown': metric['Max Drawdown'],
+                    'Trades Count': len(metric['Trades'])
+                })
 
-            print(f'Done backtesting for {symbol} with the {timeframe} timeframe')
+            print(f'Done for {symbol} with the {timeframe} timeframe')
 
     save_results_to_excel(results)
     save_summary_to_excel(summary)
     print("Backtesting completed and results are saved.")
 
+
 if __name__ == "__main__":
     main()
-
-
 
