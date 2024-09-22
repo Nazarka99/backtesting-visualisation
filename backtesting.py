@@ -7,12 +7,12 @@ from _managing_data import update_data
 from common_functions import calculate_heikin_ashi, calculate_supertrend, calculate_macd
 
 # Define symbols and timeframes
-# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
-#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+symbols = ['MATIC/USDT', 'BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
+           'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
 
-timeframes = ['30m', '1h']
+timeframes = ['15m', '30m', '1h', '2h', '4h']
 
-symbols = ['BTC/USDT', 'ETH/USDT']
+# symbols = ['BTC/USDT', 'ETH/USDT']
 
 # timeframes = ['30m', '1h']
 #
