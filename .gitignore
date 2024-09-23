@@ -7,3 +7,5 @@
 .idea/.name
 .idea/backtesting&visualization.iml
 downloading_data.py
+_data
+__data
