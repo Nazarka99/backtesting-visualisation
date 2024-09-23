@@ -1,6 +1,8 @@
 import pandas as pd
 import pandas_ta as ta
+import numpy as np
 from openpyxl import Workbook
+from sklearn.linear_model import LinearRegression
 
 # Assuming these functions are defined in your local modules
 from _managing_data import update_data
@@ -9,6 +11,19 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # Define symbols and timeframes
 timeframes = ['30m', '1h']
 symbols = ['BTC/USDT', 'ETH/USDT']
+
+# Define symbols and timeframes
+# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
+#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+#
+# timeframes = ['15m', '30m', '1h', '2h', '4h']
+
+def get_linear_coeffs(values):
+    """Calculate linear regression coefficients k (slope) and b (intercept)."""
+    x = np.arange(len(values)).reshape(-1, 1)
+    y = values
+    model = LinearRegression().fit(x, y)
+    return model.coef_[0], model.intercept_
 
 def macd_signals(df):
     """Generate potential trading opportunities based on MACD crossover."""
@@ -37,9 +52,9 @@ def backtest_strategy(df):
             continue
 
         if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
-            signal = 1  # Long position
+            signal = 1
         elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
-            signal = -1  # Short position
+            signal = -1
         else:
             continue
 
@@ -48,6 +63,12 @@ def backtest_strategy(df):
         super_trend = row['SuperTrend']
         stop_loss = super_trend - atr if signal == 1 else super_trend + atr
         stop_loss_distance = abs(entry_price - stop_loss)
+        position_size = (risk_per_trade * capital) / stop_loss_distance
+
+        signaling_candle_high = row['high']
+        signaling_candle_low = row['low']
+
+        future_rows = df.iloc[df.index.get_loc(index) + 1:]  # correctly advancing to the next candle
 
         for tp_multiplier in tp_multipliers:
             tp = entry_price + tp_multiplier * stop_loss_distance if signal == 1 else entry_price - tp_multiplier * stop_loss_distance
@@ -55,31 +76,36 @@ def backtest_strategy(df):
             highest_high = row['high']
             lowest_low = row['low']
 
-            for j, future_row in df.loc[index:].iterrows():
+            for j, future_row in future_rows.iterrows():
                 if signal == 1:
-                    highest_high = max(highest_high, future_row['high'])
+                    if future_row['high'] > highest_high and future_row['high'] != signaling_candle_high:
+                        highest_high = future_row['high']
                     if future_row['low'] <= stop_loss or future_row['high'] >= tp:
                         exit_price = stop_loss if future_row['low'] <= stop_loss else tp
                         break
                 else:
-                    lowest_low = min(lowest_low, future_row['low'])
+                    if future_row['low'] < lowest_low and future_row['low'] != signaling_candle_low:
+                        lowest_low = future_row['low']
                     if future_row['high'] >= stop_loss or future_row['low'] <= tp:
                         exit_price = stop_loss if future_row['high'] >= stop_loss else tp
                         break
 
-            if exit_price is not None:
-                optimum_closing = tp if exit_price == tp else (highest_high if signal == 1 else lowest_low)
-                profit = (exit_price - entry_price) if signal == 1 else (entry_price - exit_price)
-                results.append({
-                    'Symbol': row['Symbol'], 'Timeframe': row['Timeframe'],
-                    'Entry Price': entry_price, 'Exit Price': exit_price,
-                    'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
-                    'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                    'Optimum Closing': optimum_closing
-                })
-                trade_open = False  # Close trade after processing
+            if exit_price is None:
+                exit_price = row['close']  # Default exit price if none conditions met
+
+            optimum_closing = tp if exit_price == tp else (highest_high if signal == 1 and exit_price != tp else lowest_low if signal == -1 and exit_price != tp else exit_price)
+            profit = (exit_price - entry_price) * position_size if signal == 1 else (entry_price - exit_price) * position_size
+            results.append({
+                'Symbol': row['Symbol'], 'Timeframe': row['Timeframe'],
+                'Entry Price': entry_price, 'Exit Price': exit_price,
+                'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
+                'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
+                'Optimum Closing': optimum_closing
+            })
+            trade_open = False  # Close trade after processing
 
     return results
+
 
 def calculate_indicators(df):
     df['SMA200'] = ta.sma(df['HA_close'], length=200)
@@ -90,7 +116,7 @@ def calculate_indicators(df):
     supertrend_values = ta.supertrend(df['HA_high'], df['HA_low'], df['HA_close'], length=12, multiplier=3)
     df['SuperTrend'] = supertrend_values['SUPERT_12_3.0']
     df['ATR'] = ta.atr(df['HA_high'], df['HA_low'], df['HA_close'], length=14)
-    df['RSI'] = ta.rsi(df['HA_close'], length=14)  # RSI calculation based on Heikin Ashi close
+    df['RSI'] = ta.rsi(df['HA_close'], length=14)  # Calculate RSI
     return df
 
 def save_results_to_excel(results, filename='backtesting_results.xlsx'):
@@ -111,8 +137,6 @@ def main():
             trades = backtest_strategy(df)
             results.extend(trades)
     save_results_to_excel(results)
-
-    print('Done')
 
 if __name__ == "__main__":
     main()
