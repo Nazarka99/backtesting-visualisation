@@ -117,8 +117,6 @@ def backtest_strategy(df):
 
     return results
 
-
-
 def calculate_indicators(df):
     df['SMA200'] = ta.sma(df['HA_close'], length=200)
     macd_values = ta.macd(df['HA_close'])
