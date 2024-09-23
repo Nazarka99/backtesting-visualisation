@@ -37,7 +37,7 @@ def macd_signals(df):
 
 def backtest_strategy(df):
     initial_capital = 10000
-    risk_per_trade = 0.05
+    risk_per_trade = 0.05  # 5% of capital risked per trade
     trades = []
     capital = initial_capital
     max_drawdown = 0
@@ -52,9 +52,9 @@ def backtest_strategy(df):
             continue
 
         if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
-            signal = 1
+            signal = 1  # Long position
         elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
-            signal = -1
+            signal = -1  # Short position
         else:
             continue
 
@@ -63,12 +63,22 @@ def backtest_strategy(df):
         super_trend = row['SuperTrend']
         stop_loss = super_trend - atr if signal == 1 else super_trend + atr
         stop_loss_distance = abs(entry_price - stop_loss)
-        position_size = (risk_per_trade * capital) / stop_loss_distance
+        position_size = (risk_per_trade * capital) / stop_loss_distance  # Calculate position size
+
+        # Calculate the linear regression coefficients for the last 5 RSI values before the signaling candle
+        if df.index.get_loc(index) >= 5:
+            rsi_values = df['RSI'].iloc[df.index.get_loc(index) - 5:df.index.get_loc(index)].values
+            if len(rsi_values) == 5:
+                k, b = get_linear_coeffs(rsi_values)
+            else:
+                k, b = 0, 0  # Default values if not enough data
+        else:
+            k, b = 0, 0  # Default values if not enough data
 
         signaling_candle_high = row['high']
         signaling_candle_low = row['low']
 
-        future_rows = df.iloc[df.index.get_loc(index) + 1:]  # correctly advancing to the next candle
+        future_rows = df.iloc[df.index.get_loc(index) + 1:]  # Correctly advancing to the next candle
 
         for tp_multiplier in tp_multipliers:
             tp = entry_price + tp_multiplier * stop_loss_distance if signal == 1 else entry_price - tp_multiplier * stop_loss_distance
@@ -100,11 +110,13 @@ def backtest_strategy(df):
                 'Entry Price': entry_price, 'Exit Price': exit_price,
                 'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
                 'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                'Optimum Closing': optimum_closing
+                'Optimum Closing': optimum_closing,
+                'RSI Slope (k)': k, 'RSI Intercept (b)': b
             })
             trade_open = False  # Close trade after processing
 
     return results
+
 
 
 def calculate_indicators(df):
