@@ -9,3 +9,9 @@
 downloading_data.py
 _data
 __data
+_data/ADAUSDT_1d.xlsx
+_data/ADAUSDT_1h.xlsx
+_data/ADAUSDT_2h.xlsx
+_data/ADAUSDT_4h.xlsx
+_data/ADAUSDT_15m.xlsx
+_data/ADAUSDT_30m.xlsx
