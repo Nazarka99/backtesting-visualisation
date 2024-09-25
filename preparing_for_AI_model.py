@@ -117,6 +117,94 @@ def backtest_strategy(df):
 
     return results
 
+def get_previous_rsi(df_higher, signal_time):
+    # Find the index for the last entry before the signal time
+    valid_times = df_higher[df_higher.index <= signal_time]
+    if not valid_times.empty:
+        last_time = valid_times.index[-1]
+        return df_higher.loc[last_time]['RSI'], last_time
+    return None, None
+
+def backtest_strategy_with_higher_timeframe_rsi(df, higher_df):
+    initial_capital = 10000
+    risk_per_trade = 0.05
+    trades = []
+    capital = initial_capital
+    max_drawdown = 0
+    trade_open = False
+
+    tp_multipliers = [1, 1.5, 2]
+    results = []
+
+    for index, row in df.iterrows():
+        if trade_open:
+            continue
+
+        if row['potential_signal'] == 1 and row['HA_close'] > row['SuperTrend'] and row['HA_close'] > row['SMA200']:
+            signal = 1  # Long position
+        elif row['potential_signal'] == -1 and row['HA_close'] < row['SuperTrend'] and row['HA_close'] < row['SMA200']:
+            signal = -1  # Short position
+        else:
+            continue
+
+        entry_price = row['open']
+        atr = row['ATR']
+        super_trend = row['SuperTrend']
+        stop_loss = super_trend - atr if signal == 1 else super_trend + atr
+        stop_loss_distance = abs(entry_price - stop_loss)
+        position_size = (risk_per_trade * capital) / stop_loss_distance  # Calculate position size
+
+        # Get the last RSI value from higher timeframe before the signal
+        signal_time = row.name
+        higher_time_rsi, last_higher_time = get_previous_rsi(higher_df, signal_time)
+
+        signaling_candle_high = row['high']
+        signaling_candle_low = row['low']
+
+        future_rows = df.iloc[df.index.get_loc(index) + 1:]  # Correctly advancing to the next candle
+
+        for tp_multiplier in tp_multipliers:
+            tp = entry_price + tp_multiplier * stop_loss_distance if signal == 1 else entry_price - tp_multiplier * stop_loss_distance
+            exit_price = None
+            highest_high = row['high']
+            lowest_low = row['low']
+
+            for j, future_row in future_rows.iterrows():
+                if signal == 1:
+                    if future_row['high'] > highest_high and future_row['high'] != signaling_candle_high:
+                        highest_high = future_row['high']
+                    if future_row['low'] <= stop_loss or future_row['high'] >= tp:
+                        exit_price = stop_loss if future_row['low'] <= stop_loss else tp
+                        break
+                else:
+                    if future_row['low'] < lowest_low and future_row['low'] != signaling_candle_low:
+                        lowest_low = future_row['low']
+                    if future_row['high'] >= stop_loss or future_row['low'] <= tp:
+                        exit_price = stop_loss if future_row['high'] >= stop_loss else tp
+                        break
+
+            if exit_price is None:
+                exit_price = row['close']  # Default exit price if none conditions met
+
+            optimum_closing = tp if exit_price == tp else (highest_high if signal == 1 and exit_price != tp else lowest_low if signal == -1 and exit_price != tp else exit_price)
+            profit = (exit_price - entry_price) * position_size if signal == 1 else (entry_price - exit_price) * position_size
+            results.append({
+                'Symbol': row['Symbol'], 'Timeframe': row['Timeframe'],
+                'Entry Price': entry_price, 'Exit Price': exit_price,
+                'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
+                'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
+                'Optimum Closing': optimum_closing,
+                'Higher Timeframe RSI': higher_time_rsi,
+                'Higher Timeframe Last Time': last_higher_time
+            })
+            trade_open = False  # Close trade after processing
+
+    return results
+
+# Add this new function to your main module and call it accordingly with your existing DataFrame manipulations.
+# Ensure higher timeframe data is prepared and passed into this function along with your base timeframe data.
+
+
 def calculate_indicators(df):
     df['SMA200'] = ta.sma(df['HA_close'], length=200)
     macd_values = ta.macd(df['HA_close'])
@@ -134,18 +222,53 @@ def save_results_to_excel(results, filename='backtesting_results.xlsx'):
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         df.to_excel(writer, sheet_name='Consolidated Results', index=False)
 
+# def main():
+#     results = []
+#     for symbol in symbols:
+#         for timeframe in timeframes:
+#             df = update_data(symbol, timeframe)  # Assume this fetches the data
+#             df = calculate_heikin_ashi(df)
+#             df = calculate_indicators(df)
+#             df = macd_signals(df)
+#             df['Symbol'] = symbol
+#             df['Timeframe'] = timeframe
+#             trades = backtest_strategy(df)
+#             results.extend(trades)
+#     save_results_to_excel(results)
+
 def main():
     results = []
+    # Define mapping of current to higher timeframes
+    higher_timeframes = {
+        '15m': '1h',
+        '30m': '1h',
+        '1h': '4h',
+        '2h': '4h',
+        '4h': '1d'
+    }
     for symbol in symbols:
         for timeframe in timeframes:
-            df = update_data(symbol, timeframe)  # Assume this fetches the data
+            df = update_data(symbol, timeframe)  # Fetch current timeframe data
             df = calculate_heikin_ashi(df)
             df = calculate_indicators(df)
             df = macd_signals(df)
             df['Symbol'] = symbol
             df['Timeframe'] = timeframe
-            trades = backtest_strategy(df)
-            results.extend(trades)
+
+            # Determine the higher timeframe based on the current timeframe
+            higher_tf = higher_timeframes.get(timeframe)
+            if higher_tf:
+                df_higher = update_data(symbol, higher_tf)  # Fetch higher timeframe data
+                df_higher = calculate_heikin_ashi(df_higher)
+                df_higher['RSI'] = ta.rsi(df_higher['HA_close'],
+                                          length=14)  # Assuming RSI length 14 for higher timeframe
+
+                # Now call the backtest function with both current and higher timeframe data
+                trades = backtest_strategy_with_higher_timeframe_rsi(df, df_higher)
+                results.extend(trades)
+            else:
+                print(f"No higher timeframe defined for {timeframe}, skipping RSI higher timeframe calculations.")
+
     save_results_to_excel(results)
 
 if __name__ == "__main__":
