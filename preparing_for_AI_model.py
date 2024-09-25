@@ -11,12 +11,13 @@ from common_functions import calculate_heikin_ashi, calculate_supertrend, calcul
 # Define symbols and timeframes
 timeframes = ['30m', '1h']
 symbols = ['BTC/USDT', 'ETH/USDT']
-
-# Define symbols and timeframes
-# symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
-#            'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-#
-# timeframes = ['15m', '30m', '1h', '2h', '4h']
+higher_timeframes = {
+    '15m': '1h',
+    '30m': '1h',
+    '1h': '4h',
+    '2h': '4h',
+    '4h': '1d'
+}
 
 def get_linear_coeffs(values):
     """Calculate linear regression coefficients k (slope) and b (intercept)."""
@@ -35,26 +36,24 @@ def macd_signals(df):
             df.loc[df.index[i], 'potential_signal'] = -1  # Potential sell
     return df
 
-
 def get_previous_rsi(df_higher, signal_time):
-    # Find the index for the last entry before the signal time
+    """Retrieve the RSI value just before the signal time from the higher timeframe data."""
     valid_times = df_higher[df_higher.index <= signal_time]
     if not valid_times.empty:
         last_time = valid_times.index[-1]
         return df_higher.loc[last_time]['RSI'], last_time
     return None, None
 
-def backtest_strategy(df):
+def backtest_strategy(df, df_higher):
     initial_capital = 10000
     risk_per_trade = 0.05  # 5% of capital risked per trade
-    trades = []
+    results = []
     capital = initial_capital
     max_drawdown = 0
     peak_capital = capital
     last_exit_time = None  # This will keep track of the last exit time
 
     tp_multipliers = [1, 1.5, 2]
-    results = []
 
     for index, row in df.iterrows():
         # Skip to next iteration if current row time is before last exit time
@@ -74,6 +73,8 @@ def backtest_strategy(df):
         stop_loss = super_trend - atr if signal == 1 else super_trend + atr
         stop_loss_distance = abs(entry_price - stop_loss)
         position_size = (risk_per_trade * capital) / stop_loss_distance
+
+        previous_rsi, rsi_time = get_previous_rsi(df_higher, row.name)  # Fetch the previous RSI value
 
         future_rows = df.iloc[df.index.get_loc(index) + 1:]  # Start checking from the next row
 
@@ -108,15 +109,10 @@ def backtest_strategy(df):
                 'Entry Price': entry_price, 'Exit Price': exit_price,
                 'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
                 'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                'Optimum Closing': optimum_closing
+                'Optimum Closing': optimum_closing, 'Previous RSI': previous_rsi, 'RSI Time': rsi_time
             })
 
     return results
-
-
-# Add this new function to your main module and call it accordingly with your existing DataFrame manipulations.
-# Ensure higher timeframe data is prepared and passed into this function along with your base timeframe data.
-
 
 def calculate_indicators(df):
     df['SMA200'] = ta.sma(df['HA_close'], length=200)
@@ -135,25 +131,8 @@ def save_results_to_excel(results, filename='backtesting_results.xlsx'):
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         df.to_excel(writer, sheet_name='Consolidated Results', index=False)
 
-# def main():
-#     results = []
-#     for symbol in symbols:
-#         for timeframe in timeframes:
-#             df = update_data(symbol, timeframe)  # Assume this fetches the data
-#             df = calculate_heikin_ashi(df)
-#             df = calculate_indicators(df)
-#             df = macd_signals(df)
-#             df['Symbol'] = symbol
-#             df['Timeframe'] = timeframe
-#             trades = backtest_strategy(df)
-#             results.extend(trades)
-#     save_results_to_excel(results)
-
 def main():
     results = []
-    symbols = ['BTC/USDT', 'ETH/USDT']  # Example symbols
-    timeframes = ['30m', '1h']  # Example timeframes
-
     for symbol in symbols:
         for timeframe in timeframes:
             print(f"Processing {symbol} on {timeframe} timeframe")
@@ -164,13 +143,16 @@ def main():
             df['Symbol'] = symbol  # Add symbol column for reference
             df['Timeframe'] = timeframe  # Add timeframe column for reference
 
-            trades = backtest_strategy(df)  # Perform backtesting
+            # Fetch and prepare higher timeframe data
+            df_higher = update_data(symbol, higher_timeframes[timeframe])
+            df_higher = calculate_heikin_ashi(df_higher)  # Convert higher timeframe data to Heikin Ashi
+            df_higher = calculate_indicators(df_higher)  # Calculate indicators for the higher timeframe
+
+            trades = backtest_strategy(df, df_higher)  # Perform backtesting
             results.extend(trades)  # Collect all trades across symbols and timeframes
 
-    # Save the compiled results to an Excel file
     save_results_to_excel(results, filename='backtesting_results.xlsx')
     print("Backtesting completed and results are saved.")
-
 
 if __name__ == "__main__":
     main()
