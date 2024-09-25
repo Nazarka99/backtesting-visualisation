@@ -36,12 +36,12 @@ def macd_signals(df):
             df.loc[df.index[i], 'potential_signal'] = -1  # Potential sell
     return df
 
-def get_previous_rsi(df_higher, signal_time):
-    """Retrieve the last five RSI values just before the signal time from the higher timeframe data."""
+def get_previous_values(df_higher, signal_time, column):
+    """Retrieve the last five values of the specified column just before the signal time from the higher timeframe data."""
     valid_times = df_higher[df_higher.index <= signal_time]
     if not valid_times.empty:
         last_times = valid_times.index[-5:]  # Get the last 5 times
-        return df_higher.loc[last_times]['RSI'].values, last_times
+        return df_higher.loc[last_times][column].values, last_times
     return None, None
 
 def backtest_strategy(df, df_higher):
@@ -74,9 +74,11 @@ def backtest_strategy(df, df_higher):
         stop_loss_distance = abs(entry_price - stop_loss)
         position_size = (risk_per_trade * capital) / stop_loss_distance
 
-        previous_rsi_values, rsi_times = get_previous_rsi(df_higher, row.name)  # Fetch the last five RSI values
+        previous_rsi_values, rsi_times = get_previous_values(df_higher, row.name, 'RSI')
+        previous_macd_values, macd_times = get_previous_values(df_higher, row.name, 'macd')  # Fetch the last five MACD values
 
-        k, b = get_linear_coeffs(previous_rsi_values) if previous_rsi_values is not None else (None, None)  # Calculate regression line
+        rsi_k, rsi_b = get_linear_coeffs(previous_rsi_values) if previous_rsi_values is not None else (None, None)  # Calculate regression line for RSI
+        macd_k, macd_b = get_linear_coeffs(previous_macd_values) if previous_macd_values is not None else (None, None)  # Calculate regression line for MACD
 
         future_rows = df.iloc[df.index.get_loc(index) + 1:]  # Start checking from the next row
 
@@ -111,10 +113,10 @@ def backtest_strategy(df, df_higher):
                 'Entry Price': entry_price, 'Exit Price': exit_price,
                 'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
                 'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                # 'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values.tolist() if previous_rsi_values is not None else [],
-                'Optimum Closing': optimum_closing,
-                'Previous RSI Values': previous_rsi_values[-1] if previous_rsi_values is not None else [],
-                'RSI Line Slope (k)': k, 'RSI Line Intercept (b)': b
+                'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values.tolist() if previous_rsi_values is not None else [],
+                'RSI Times': rsi_times.tolist() if rsi_times is not None else [], 'RSI Line Slope (k)': rsi_k, 'RSI Line Intercept (b)': rsi_b,
+                'Previous MACD Values': previous_macd_values.tolist() if previous_macd_values is not None else [],
+                'MACD Times': macd_times.tolist() if macd_times is not None else [], 'MACD Line Slope (k)': macd_k, 'MACD Line Intercept (b)': macd_b
             })
 
     return results
