@@ -37,11 +37,11 @@ def macd_signals(df):
     return df
 
 def get_previous_rsi(df_higher, signal_time):
-    """Retrieve the RSI value just before the signal time from the higher timeframe data."""
+    """Retrieve the last five RSI values just before the signal time from the higher timeframe data."""
     valid_times = df_higher[df_higher.index <= signal_time]
     if not valid_times.empty:
-        last_time = valid_times.index[-1]
-        return df_higher.loc[last_time]['RSI'], last_time
+        last_times = valid_times.index[-5:]  # Get the last 5 times
+        return df_higher.loc[last_times]['RSI'].values, last_times
     return None, None
 
 def backtest_strategy(df, df_higher):
@@ -74,7 +74,9 @@ def backtest_strategy(df, df_higher):
         stop_loss_distance = abs(entry_price - stop_loss)
         position_size = (risk_per_trade * capital) / stop_loss_distance
 
-        previous_rsi, rsi_time = get_previous_rsi(df_higher, row.name)  # Fetch the previous RSI value
+        previous_rsi_values, rsi_times = get_previous_rsi(df_higher, row.name)  # Fetch the last five RSI values
+
+        k, b = get_linear_coeffs(previous_rsi_values) if previous_rsi_values is not None else (None, None)  # Calculate regression line
 
         future_rows = df.iloc[df.index.get_loc(index) + 1:]  # Start checking from the next row
 
@@ -109,7 +111,11 @@ def backtest_strategy(df, df_higher):
                 'Entry Price': entry_price, 'Exit Price': exit_price,
                 'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
                 'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                'Optimum Closing': optimum_closing, 'Previous RSI': previous_rsi, 'RSI Time': rsi_time
+                # 'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values.tolist() if previous_rsi_values is not None else [],
+                'Optimum Closing': optimum_closing,
+                'Previous RSI Values': previous_rsi_values[-1] if previous_rsi_values is not None else [],
+                # 'RSI Times': rsi_times.tolist() if rsi_times is not None else [], 'RSI Line Slope (k)': k, 'RSI Line Intercept (b)': b
+                'RSI Line Slope (k)': k, 'RSI Line Intercept (b)': b
             })
 
     return results
@@ -143,7 +149,6 @@ def main():
             df['Symbol'] = symbol  # Add symbol column for reference
             df['Timeframe'] = timeframe  # Add timeframe column for reference
 
-            # Fetch and prepare higher timeframe data
             df_higher = update_data(symbol, higher_timeframes[timeframe])
             df_higher = calculate_heikin_ashi(df_higher)  # Convert higher timeframe data to Heikin Ashi
             df_higher = calculate_indicators(df_higher)  # Calculate indicators for the higher timeframe
