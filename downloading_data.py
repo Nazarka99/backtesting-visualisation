@@ -11,20 +11,21 @@ exchange = ccxt.binance()
 # Define symbols and timeframes
 symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT',
                'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
-timeframes = ['15m', '30m', '1h', '2h', '4h']
+
+timeframes = ['15m', '30m', '1h', '2h', '4h', '1d']
 
 # symbols = ['BTC/USDT']
-# timeframes = ['15m']
+# timeframes = ['1d']
 
 # Ensure the data directory exists
-data_directory = "__data"
+data_directory = "_data"
 os.makedirs(data_directory, exist_ok=True)
 
 def fetch_and_save_data(symbol, timeframe):
     # Calculate the end time for data (current time)
     end_time = datetime.utcnow()
     # Calculate the start time for data (365 days ago)
-    start_time = end_time - timedelta(days=750)
+    start_time = end_time - timedelta(days=45)
 
     all_data = []
 
