@@ -114,7 +114,6 @@ def backtest_strategy(df, df_higher):
                 # 'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values.tolist() if previous_rsi_values is not None else [],
                 'Optimum Closing': optimum_closing,
                 'Previous RSI Values': previous_rsi_values[-1] if previous_rsi_values is not None else [],
-                # 'RSI Times': rsi_times.tolist() if rsi_times is not None else [], 'RSI Line Slope (k)': k, 'RSI Line Intercept (b)': b
                 'RSI Line Slope (k)': k, 'RSI Line Intercept (b)': b
             })
 
