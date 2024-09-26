@@ -39,8 +39,8 @@ y = df['Profit change']
 # Normalizing continuous data
 continuous_features = ['Entry Price', 'TP Multiplier', 'RSI Line Slope (k)', 'RSI Line Intercept (b)',
                        'MACD Line Slope (k)', 'MACD Line Intercept (b)']
-# scaler = StandardScaler()
-# X[continuous_features] = scaler.fit_transform(X[continuous_features])
+scaler = StandardScaler()
+X[continuous_features] = scaler.fit_transform(X[continuous_features])
 
 # Splitting the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
