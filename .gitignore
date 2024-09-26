@@ -7,6 +7,7 @@
 .idea/.name
 .idea/backtesting&visualization.iml
 downloading_data.py
+_managing_data.py
 _data
 __data
 _data/ADAUSDT_1d.xlsx
