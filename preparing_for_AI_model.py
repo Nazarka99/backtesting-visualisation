@@ -9,8 +9,13 @@ from _managing_data import update_data
 from common_functions import calculate_heikin_ashi, calculate_supertrend, calculate_macd
 
 # Define symbols and timeframes
-timeframes = ['30m', '1h']
-symbols = ['BTC/USDT', 'ETH/USDT']
+# timeframes = ['30m', '1h']
+# symbols = ['BTC/USDT', 'ETH/USDT']
+
+symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT',
+               'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
+timeframes = ['15m', '30m', '1h', '2h', '4h']
+
 higher_timeframes = {
     '15m': '1h',
     '30m': '1h',
@@ -113,7 +118,7 @@ def backtest_strategy(df, df_higher):
                 'Entry Price': entry_price, 'Exit Price': exit_price,
                 'Profit': profit, 'Type': 'Long' if signal == 1 else 'Short',
                 'Entry Date': index, 'Exit Date': j, 'TP Multiplier': tp_multiplier,
-                'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values.tolist() if previous_rsi_values is not None else [],
+                'Optimum Closing': optimum_closing, 'Previous RSI Values': previous_rsi_values[-1] if previous_rsi_values is not None else [],
                 'RSI Times': rsi_times.tolist() if rsi_times is not None else [], 'RSI Line Slope (k)': rsi_k, 'RSI Line Intercept (b)': rsi_b,
                 'Previous MACD Values': previous_macd_values.tolist() if previous_macd_values is not None else [],
                 'MACD Times': macd_times.tolist() if macd_times is not None else [], 'MACD Line Slope (k)': macd_k, 'MACD Line Intercept (b)': macd_b
