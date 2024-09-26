@@ -1,45 +1,51 @@
 import pandas as pd
-import pandas_ta as ta
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
-# Assuming these functions are defined in your local modules
-from _managing_data import update_data
+# Load data from Excel
+df = pd.read_excel('backtesting_results.xlsx')
 
-def calculate_macd(df):
-    macd = ta.macd(df['close'], fast=12, slow=26, signal=9)
-    df['MACD'] = macd['MACD_12_26_9']
-    df['MACD_signal'] = macd['MACDs_12_26_9']
-    return df
+# Selecting the necessary columns
+features = ['Symbol', 'Timeframe', 'Entry Price', 'Type', 'TP Multiplier',
+            'RSI Line Slope (k)', 'RSI Line Intercept (b)', 'MACD Line Slope (k)', 'MACD Line Intercept (b)']
+X = df[features]
 
-def find_macd_signals(df):
-    signals = []
-    for i in range(1, len(df)):
-        if df.iloc[i]['MACD'] > df.iloc[i]['MACD_signal'] and df.iloc[i - 1]['MACD'] <= df.iloc[i - 1]['MACD_signal']:
-            signals.append(df.index[i])
-    return signals
+# Calculate Profit Change
+df['Profit change'] = df['Entry Price'] / df['Optimum Closing']
+y = df['Profit change']
 
-def get_previous_rsi(df_higher, signal_time):
-    # Find the index for the last entry before the signal time
-    valid_times = df_higher[df_higher.index <= signal_time]
-    if not valid_times.empty:
-        last_time = valid_times.index[-1]
-        return df_higher.loc[last_time]['RSI'], last_time
-    return None, None
+# Handling categorical data
+categorical_features = ['Symbol', 'Timeframe', 'Type']
+X = pd.get_dummies(X, columns=categorical_features)
 
-def main():
-    symbol = 'BTC/USDT'
-    df_15m = update_data(symbol, '15m')
-    df_15m = calculate_macd(df_15m)
-    df_1h = update_data(symbol, '1h')
-    df_1h['RSI'] = ta.rsi(df_1h['close'], length=7)
+# Normalizing continuous data
+continuous_features = ['Entry Price', 'TP Multiplier', 'RSI Line Slope (k)', 'RSI Line Intercept (b)',
+                       'MACD Line Slope (k)', 'MACD Line Intercept (b)']
+scaler = StandardScaler()
+X[continuous_features] = scaler.fit_transform(X[continuous_features])
 
-    signals = find_macd_signals(df_15m)
-    if signals:
-        for signal_time in signals:
-            rsi_value, last_time = get_previous_rsi(df_1h, signal_time)
-            print(f"MACD signal time (15m): {signal_time}")
-            print(f"Previous RSI value from 1h timeframe at {last_time}: {rsi_value}")
-    else:
-        print("No MACD signals found.")
+# Splitting the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-if __name__ == "__main__":
-    main()
+# Initialize and train the Gradient Boosting Regressor
+model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict on the testing set
+y_pred = model.predict(X_test)
+
+# Calculate and print the performance metrics
+mse = mean_squared_error(y_test, y_pred)
+mae = mean_absolute_error(y_test, y_pred)
+print("Mean Squared Error:", mse)
+print("Mean Absolute Error:", mae)
+
+# Optional: Save the trained model for later use
+import joblib
+joblib.dump(model, 'gradient_boosting_regressor.pkl')
+print("Model saved successfully!")
+
+# If you need to load the model later:
+# model = joblib.load('gradient_boosting_regressor.pkl')
