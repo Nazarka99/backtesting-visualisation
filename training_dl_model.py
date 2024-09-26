@@ -1,11 +1,29 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+import joblib
 
 # Load data from Excel
 df = pd.read_excel('backtesting_results.xlsx')
+
+# Manual mappings for categorical features
+symbol_mapping = {
+    'BTC/USDT': 0, 'ETH/USDT': 1, 'BNB/USDT': 2, 'SOL/USDT': 3, 'XRP/USDT': 4,
+    'ADA/USDT': 5, 'DOGE/USDT': 6, 'DOT/USDT': 7, 'LINK/USDT': 8, 'IMX/USDT': 9, 'ICP/USDT': 10
+}
+timeframe_mapping = {
+    '15m': 0, '30m': 1, '1h': 2, '2h': 3, '4h': 4
+}
+type_mapping = {
+    'Long': 0, 'Short': 1
+}
+
+# Apply mappings
+df['Symbol'] = df['Symbol'].map(symbol_mapping)
+df['Timeframe'] = df['Timeframe'].map(timeframe_mapping)
+df['Type'] = df['Type'].map(type_mapping)
 
 # Selecting the necessary columns
 features = ['Symbol', 'Timeframe', 'Entry Price', 'Type', 'TP Multiplier',
@@ -15,10 +33,6 @@ X = df[features]
 # Calculate Profit Change
 df['Profit change'] = df['Entry Price'] / df['Optimum Closing']
 y = df['Profit change']
-
-# Handling categorical data
-categorical_features = ['Symbol', 'Timeframe', 'Type']
-X = pd.get_dummies(X, columns=categorical_features)
 
 # Normalizing continuous data
 continuous_features = ['Entry Price', 'TP Multiplier', 'RSI Line Slope (k)', 'RSI Line Intercept (b)',
@@ -42,10 +56,6 @@ mae = mean_absolute_error(y_test, y_pred)
 print("Mean Squared Error:", mse)
 print("Mean Absolute Error:", mae)
 
-# Optional: Save the trained model for later use
-import joblib
+# Save the trained model for later use
 joblib.dump(model, 'gradient_boosting_regressor.pkl')
 print("Model saved successfully!")
-
-# If you need to load the model later:
-# model = joblib.load('gradient_boosting_regressor.pkl')
