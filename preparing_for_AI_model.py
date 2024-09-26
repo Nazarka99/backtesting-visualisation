@@ -25,11 +25,18 @@ higher_timeframes = {
 }
 
 def get_linear_coeffs(values):
-    """Calculate linear regression coefficients k (slope) and b (intercept)."""
-    x = np.arange(len(values)).reshape(-1, 1)
-    y = values
-    model = LinearRegression().fit(x, y)
-    return model.coef_[0], model.intercept_
+    # """Calculate linear regression coefficients k (slope) and b (intercept)."""
+    # x = np.arange(len(values)).reshape(-1, 1)
+    # y = values
+    # model = LinearRegression().fit(x, y)
+    # return model.coef_[0], model.intercept_
+
+    x = np.arange(1, 6)  # x values from 1 to 5
+    y = np.array(values)
+
+    # Calculate the coefficients of the linear fit (slope and intercept)
+    slope, intercept = np.polyfit(x, y, 1)
+    return slope, intercept
 
 def macd_signals(df):
     """Generate potential trading opportunities based on MACD crossover."""
