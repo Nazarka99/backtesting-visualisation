@@ -16,6 +16,8 @@ symbols = ['BTC/USDT', 'ETH/USDT']
 #                'DOT/USDT', 'LINK/USDT', 'IMX/USDT', 'ICP/USDT']
 # timeframes = ['15m', '30m', '1h', '2h', '4h']
 
+"""preparing for prediction"""
+
 higher_timeframes = {
     '15m': '1h',
     '30m': '1h',

@@ -5,6 +5,8 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import joblib
 
+"""training ml-model"""
+
 # Load data from Excel
 df = pd.read_excel('backtesting_results.xlsx')
 
@@ -37,8 +39,8 @@ y = df['Profit change']
 # Normalizing continuous data
 continuous_features = ['Entry Price', 'TP Multiplier', 'RSI Line Slope (k)', 'RSI Line Intercept (b)',
                        'MACD Line Slope (k)', 'MACD Line Intercept (b)']
-scaler = StandardScaler()
-X[continuous_features] = scaler.fit_transform(X[continuous_features])
+# scaler = StandardScaler()
+# X[continuous_features] = scaler.fit_transform(X[continuous_features])
 
 # Splitting the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -49,6 +51,8 @@ model.fit(X_train, y_train)
 
 # Predict on the testing set
 y_pred = model.predict(X_test)
+
+print(X_test)
 
 # Calculate and print the performance metrics
 mse = mean_squared_error(y_test, y_pred)

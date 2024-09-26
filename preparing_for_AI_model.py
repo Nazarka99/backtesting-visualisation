@@ -8,6 +8,8 @@ from sklearn.linear_model import LinearRegression
 from _managing_data import update_data
 from common_functions import calculate_heikin_ashi, calculate_supertrend, calculate_macd
 
+"""preparing for ml model training"""
+
 # Define symbols and timeframes
 # timeframes = ['30m', '1h']
 # symbols = ['BTC/USDT', 'ETH/USDT']
