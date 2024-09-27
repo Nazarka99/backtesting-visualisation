@@ -24,9 +24,9 @@ def macd_signals(df):
     """Generate potential trading opportunities based on MACD crossover."""
     df['potential_signal'] = 0
     for i in range(1, len(df)):
-        if df['macd'].iloc[i] > df['macd_signal'].iloc[i]:
+        if df['macd'].iloc[i] > df['Signal_Line'].iloc[i]:
             df.loc[df.index[i], 'potential_signal'] = 1  # Potential buy
-        elif df['macd'].iloc[i] < df['macd_signal'].iloc[i]:
+        elif df['macd'].iloc[i] < df['Signal_Line'].iloc[i]:
             df.loc[df.index[i], 'potential_signal'] = -1  # Potential sell
     return df
 
@@ -109,21 +109,30 @@ def backtest_strategy(df):
 
 
 def calculate_indicators(df):
-    # Ensure you use the correct column name, which seems to be 'HA_close' based on your Heikin Ashi calculation
     df['SMA200'] = ta.sma(df['HA_close'], length=200)
+    # macd_values = ta.macd(df['HA_close'])
+    # df['macd'] = macd_values['MACD_12_26_9']
+    # df['macd_signal'] = macd_values['MACDs_12_26_9']
+    # df['macd_hist'] = macd_values['MACDh_12_26_9']
 
-    # Adjust MACD calculation to use 'HA_close'
-    macd_values = ta.macd(df['HA_close'], fast=12, slow=26, signal=9)
-    df['macd'] = macd_values['MACD_12_26_9']
-    df['macd_signal'] = macd_values['MACDs_12_26_9']
-    df['macd_hist'] = macd_values['MACDh_12_26_9']
+    # Calculation MACD
+    # Calculate the 12-period EMA
+    df['EMA12'] = df['HA_close'].ewm(span=12, adjust=False).mean()
 
-    # Adjust SuperTrend calculation to use 'HA_high', 'HA_low', 'HA_close'
+    # Calculate the 26-period EMA
+    df['EMA26'] = df['HA_close'].ewm(span=26, adjust=False).mean()
+
+    # Calculate MACD (the difference between 12-period EMA and 26-period EMA)
+    df['macd'] = df['EMA12'] - df['EMA26']
+
+    # Calculate the 9-period EMA of MACD (Signal Line)
+    df['Signal_Line'] = df['macd'].ewm(span=9, adjust=False).mean()
+    df['MACD_Histogram'] = df['macd'] - df['Signal_Line']
+
     supertrend_values = ta.supertrend(df['HA_high'], df['HA_low'], df['HA_close'], length=12, multiplier=3)
     df['SuperTrend'] = supertrend_values['SUPERT_12_3.0']
-
-    # ATR calculation should also use 'HA_high', 'HA_low', 'HA_close'
     df['ATR'] = ta.atr(df['HA_high'], df['HA_low'], df['HA_close'], length=14)
+    df['RSI'] = ta.rsi(df['HA_close'], length=14)  # Calculate RSI
 
     return df
 
