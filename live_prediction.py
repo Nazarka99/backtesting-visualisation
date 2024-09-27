@@ -117,7 +117,7 @@ def plot_data(df, symbol, timeframe):
     #                   template="plotly_dark")
     # fig.show()
 
-def main(symbol, timeframe):
+def main(symbol, timeframe, tp_multiplier):
     # Fetch data for the main timeframe
     df = update_data(symbol, timeframe)
     df = calculate_heikin_ashi(df)
@@ -150,7 +150,7 @@ def main(symbol, timeframe):
             'Timeframe': timeframe_mapping[timeframe],
             'Entry Price': last_signal_row['HA_close'],  # Example Entry Price
             'Type': type_mapping['Long'] if last_signal_row['potential_signal'] == 1 else type_mapping['Short'],  # Determine type
-            'TP Multiplier': 1.0,  # You can replace this with your logic for TP multiplier
+            'TP Multiplier': tp_multiplier,
             'RSI Line Slope (k)': rsi_k,
             'RSI Line Intercept (b)': rsi_b,
             'MACD Line Slope (k)': macd_k,
@@ -189,5 +189,5 @@ def main(symbol, timeframe):
 
 # Example call to the main function
 if __name__ == "__main__":
-    main('BTC/USDT', '15m')
+    main('BTC/USDT', '15m', 1.5)
 
