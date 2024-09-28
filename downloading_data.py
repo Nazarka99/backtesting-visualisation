@@ -18,14 +18,14 @@ timeframes = ['15m', '30m', '1h', '2h', '4h', '1d']
 # timeframes = ['1d']
 
 # Ensure the data directory exists
-data_directory = "_data"
+data_directory = "__data"
 os.makedirs(data_directory, exist_ok=True)
 
 def fetch_and_save_data(symbol, timeframe):
     # Calculate the end time for data (current time)
     end_time = datetime.utcnow()
     # Calculate the start time for data (365 days ago)
-    start_time = end_time - timedelta(days=45)
+    start_time = end_time - timedelta(days=730)
 
     all_data = []
 
